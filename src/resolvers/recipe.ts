@@ -102,7 +102,7 @@ export class RecipeResolver {
   async createRecipe(
     @Arg('options') options: RecipeInput,
     @Ctx() { req }: MyContext
-  ) {
+  ): Promise<RecipeResponse | null> {
     const { name, ingredients, description, categoryId } = options;
 
     const user = await User.findOne((req as any).userId);
@@ -115,16 +115,18 @@ export class RecipeResolver {
 
     if (!category) {
       return {
-        errors: {
-          field: 'categoryId',
-          message: "this category doens't exists",
-        },
+        errors: [
+          {
+            field: 'categoryId',
+            message: "this category doens't exists",
+          },
+        ],
       };
     }
 
     let normalizedIngredients = normalizeIngredients(ingredients);
 
-    const recipe = Recipe.create({
+    const recipe = await Recipe.create({
       name,
       description,
       ingredients: normalizedIngredients,
