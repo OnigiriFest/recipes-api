@@ -1,6 +1,6 @@
 import { Resolver, Query, Mutation, Arg, Int } from 'type-graphql';
 import { Category } from '../entities/Category';
-import { getConnection } from 'typeorm';
+import { getConnection, Like } from 'typeorm';
 
 @Resolver()
 export class CategoryResolver {
@@ -10,7 +10,14 @@ export class CategoryResolver {
   }
 
   @Query(() => [Category])
-  getCategories() {
+  getCategories(@Arg('term', { nullable: true }) term: string) {
+    if (term) {
+      return Category.find({
+        relations: ['recipes'],
+        where: { name: Like(`%${term}%`) },
+      });
+    }
+
     return Category.find({ relations: ['recipes'] });
   }
 
