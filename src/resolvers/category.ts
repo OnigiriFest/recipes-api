@@ -6,7 +6,7 @@ import { getConnection } from 'typeorm';
 export class CategoryResolver {
   @Query(() => Category, { nullable: true })
   getOneCategory(@Arg('id', () => Int) id: number) {
-    return Category.findOne({ id });
+    return Category.findOne({ id }, { relations: ['recipes'] });
   }
 
   @Query(() => [Category])

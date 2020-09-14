@@ -1,23 +1,23 @@
-import FieldError from '../utils/fieldError';
 import {
   Arg,
+  Ctx,
   Field,
+  InputType,
   Int,
   Mutation,
   ObjectType,
   Query,
   Resolver,
-  InputType,
   UseMiddleware,
-  Ctx,
 } from 'type-graphql';
-import { getConnection } from 'typeorm';
+import { getConnection, Like } from 'typeorm';
 import { Category } from '../entities/Category';
 import { Recipe } from '../entities/Recipe';
-import normalizeIngredients from '../utils/normalizeIngredients';
+import { User } from '../entities/User';
 import { isAuth } from '../middleware/isAuth';
 import { MyContext } from '../types';
-import { User } from '../entities/User';
+import FieldError from '../utils/fieldError';
+import normalizeIngredients from '../utils/normalizeIngredients';
 
 @ObjectType()
 class RecipeResponse {
@@ -50,8 +50,33 @@ export class RecipeResolver {
     return Recipe.findOne({ id }, { relations: ['category'] });
   }
 
-  @Query(() => [Recipe])
-  getRecipes() {
+  @Query(() => [Recipe], { nullable: true })
+  async getRecipes(
+    @Arg('term', { nullable: true }) term: string,
+    @Arg('filter', { nullable: true }) filter: string
+  ) {
+    if (term && filter) {
+      switch (filter) {
+        case 'category':
+          const result = await getConnection()
+            .createQueryBuilder()
+            .from(Recipe, 'recipe')
+            .where('"categoryId" = :id', { id: parseInt(term) })
+            .execute();
+          return result;
+        case 'name':
+          return Recipe.find({ name: Like(`%${term}%`) });
+        case 'ingredients':
+          return Recipe.find({ ingredients: Like(`%${term}%`) });
+        case 'description':
+          return Recipe.find({ description: Like(`%${term}%`) });
+        default:
+          throw new Error("This filter doesn't exists");
+      }
+    } else if (term) {
+      return Recipe.find({ name: Like(`%${term}%`) });
+    }
+
     return Recipe.find({ relations: ['category'] });
   }
 
