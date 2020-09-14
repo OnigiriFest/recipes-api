@@ -1,6 +1,6 @@
 How to start the app:
 
-First go to index.ts file and modify the database info in the following json object:
+First go to index.ts file and modify the database info with your credentials in the following json object:
   const conn = await createConnection({
     type: 'postgres',
     database: 'recipes',
