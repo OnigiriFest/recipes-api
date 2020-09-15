@@ -31,11 +31,11 @@ export class Recipe extends BaseEntity {
   ingredients!: string;
 
   @Field(() => Category)
-  @ManyToOne(() => Category, (category) => category.recipes)
+  @ManyToOne(() => Category)
   category: Category;
 
   @Field(() => User)
-  @ManyToOne(() => User, (user) => user.recipes)
+  @ManyToOne(() => User)
   user: User;
 
   @Field(() => String)

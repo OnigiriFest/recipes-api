@@ -6,9 +6,7 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
-  OneToMany,
 } from 'typeorm';
-import { Recipe } from './Recipe';
 
 @ObjectType()
 @Entity()
@@ -20,10 +18,6 @@ export class Category extends BaseEntity {
   @Field()
   @Column()
   name!: string;
-
-  @Field(() => [Recipe])
-  @OneToMany(() => Recipe, (recipe) => recipe.category)
-  recipes: Recipe[];
 
   @Field(() => String)
   @CreateDateColumn()

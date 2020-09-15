@@ -15,6 +15,14 @@ import cookieParser from 'cookie-parser';
 import { verify } from 'jsonwebtoken';
 import { createTokens } from './utils/auth';
 
+declare global {
+  namespace Express {
+    export interface Request {
+      userId?: number;
+    }
+  }
+}
+
 (async () => {
   dotenv.config();
 

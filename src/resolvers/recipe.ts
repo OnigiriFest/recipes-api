@@ -10,7 +10,7 @@ import {
   Resolver,
   UseMiddleware,
 } from 'type-graphql';
-import { getConnection, Like } from 'typeorm';
+import { getConnection } from 'typeorm';
 import { Category } from '../entities/Category';
 import { Recipe } from '../entities/Recipe';
 import { User } from '../entities/User';
@@ -46,11 +46,13 @@ class RecipeInput {
 @Resolver()
 export class RecipeResolver {
   @Query(() => Recipe, { nullable: true })
+  @UseMiddleware(isAuth)
   getOneRecipe(@Arg('id', () => Int) id: number) {
     return Recipe.findOne({ id }, { relations: ['category'] });
   }
 
   @Query(() => [Recipe], { nullable: true })
+  @UseMiddleware(isAuth)
   async getRecipes(
     @Arg('term', { nullable: true }) term: string,
     @Arg('filter', { nullable: true }) filter: string
@@ -58,32 +60,64 @@ export class RecipeResolver {
     if (term && filter) {
       switch (filter) {
         case 'category':
-          const result = await getConnection()
+          let result = await getConnection()
             .createQueryBuilder()
             .from(Recipe, 'recipe')
             .where('"categoryId" = :id', { id: parseInt(term) })
             .execute();
           return result;
         case 'name':
-          return Recipe.find({ name: Like(`%${term}%`) });
+          return getConnection()
+            .getRepository(Recipe)
+            .createQueryBuilder('r')
+            .leftJoinAndSelect('r.category', 'category')
+            .leftJoinAndSelect('r.user', 'user')
+            .where('lower(r.name) like :name', {
+              name: `%${term.toLowerCase()}%`,
+            })
+            .getMany();
         case 'ingredients':
-          return Recipe.find({ ingredients: Like(`%${term}%`) });
+          return getConnection()
+            .getRepository(Recipe)
+            .createQueryBuilder('r')
+            .leftJoinAndSelect('r.category', 'category')
+            .leftJoinAndSelect('r.user', 'user')
+            .where('lower(r.ingredients) like :ingredients', {
+              ingredients: `%${term.toLowerCase()}%`,
+            })
+            .getMany();
         case 'description':
-          return Recipe.find({ description: Like(`%${term}%`) });
+          return getConnection()
+            .getRepository(Recipe)
+            .createQueryBuilder('r')
+            .leftJoinAndSelect('r.category', 'category')
+            .leftJoinAndSelect('r.user', 'user')
+            .where('lower(r.description) like :description', {
+              description: `%${term.toLowerCase()}%`,
+            })
+            .getMany();
         default:
           throw new Error("This filter doesn't exists");
       }
     } else if (term) {
-      return Recipe.find({ name: Like(`%${term}%`) });
+      return getConnection()
+        .getRepository(Recipe)
+        .createQueryBuilder('r')
+        .leftJoinAndSelect('r.category', 'category')
+        .leftJoinAndSelect('r.user', 'user')
+        .where('lower(r.name) like :name', {
+          name: `%${term.toLowerCase()}%`,
+        })
+        .getMany();
     }
 
-    return Recipe.find({ relations: ['category'] });
+    return Recipe.find({ relations: ['category', 'user'] });
   }
 
   @Query(() => [Recipe], { nullable: true })
   @UseMiddleware(isAuth)
   async getMyRecipes(@Ctx() { req }: MyContext) {
-    const user = await User.findOne((req as any).userId);
+    const user = await User.findOne(req.userId);
 
     if (!user) {
       return null;
@@ -105,7 +139,7 @@ export class RecipeResolver {
   ): Promise<RecipeResponse | null> {
     const { name, ingredients, description, categoryId } = options;
 
-    const user = await User.findOne((req as any).userId);
+    const user = await User.findOne(req.userId);
 
     if (!user) {
       return null;
@@ -148,7 +182,7 @@ export class RecipeResolver {
   ) {
     const { name, ingredients, description, categoryId } = options;
 
-    const user = await User.findOne((req as any).userId);
+    const user = await User.findOne(req.userId);
 
     if (!user) {
       return null;
@@ -194,11 +228,24 @@ export class RecipeResolver {
   }
 
   @Mutation(() => Boolean)
-  async deleteRecipe(@Arg('id', () => Int) id: number) {
+  @UseMiddleware(isAuth)
+  async deleteRecipe(
+    @Arg('id', () => Int) id: number,
+    @Ctx() { req }: MyContext
+  ) {
+    const user = await User.findOne(req.userId);
+    if (!user) {
+      return false;
+    }
+
     const recipe = await Recipe.findOne(id);
 
     if (!recipe) {
       return false;
+    }
+
+    if (recipe.user.id !== user.id) {
+      throw new Error('not authorized');
     }
 
     await Recipe.remove(recipe);
