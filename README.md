@@ -1,3 +1,5 @@
+API using Typescript Apollo Server, Express, Graphql, JWT Auth, Postgresql and TypeORM
+
 How to start the app:
 
 First go to index.ts file and modify the database info with your credentials in the following json object:
